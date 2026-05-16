@@ -17,22 +17,55 @@ export default function App() {
     <ErrorBoundary>
       <main className="min-h-safe-screen bg-guestbook text-ink">
         <section
-          className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8"
-          style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top))" }}
+          className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-6 sm:px-6"
+          style={{ paddingTop: "calc(1.75rem + env(safe-area-inset-top))" }}
         >
-          <header className="album-surface overflow-hidden rounded-lg border border-white/70 px-5 py-6 sm:px-8 sm:py-8">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose">Private Wedding Timeline</p>
-                <h1 className="mt-3 font-serif text-5xl leading-none text-ink sm:text-7xl">Malik & Sabrina</h1>
-                <p className="mt-2 text-sm font-semibold uppercase tracking-[0.22em] text-gold">2026 Memory Book</p>
-              </div>
-              <div className="max-w-sm border-l border-gold/30 pl-4 text-sm leading-6 text-ink/68">
-                Snap the arrival, the table laughs, the wishes, the tiny moments. Every post becomes part of the live wedding album.
-              </div>
+          {/* Header */}
+          <header className="album-surface overflow-hidden rounded-xl px-6 py-7 sm:px-10 sm:py-9">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-rose" style={{ fontFamily: "Nunito, system-ui, sans-serif" }}>
+              Private Wedding Timeline
+            </p>
+            <h1
+              className="mt-3 font-serif leading-[1.05] text-ink"
+              style={{ fontSize: "clamp(2.6rem, 8vw, 4rem)", fontFamily: "Lora, Georgia, serif" }}
+            >
+              Malik &amp; Sabrina
+            </h1>
+
+            {/* Wavy hand-drawn rule */}
+            <svg
+              className="wavy-rule mt-3"
+              width="180" height="10" viewBox="0 0 180 10"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M0 5 Q22 0 45 5 T90 5 T135 5 T180 5"
+                stroke="#7a9068"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                fill="none"
+                opacity="0.7"
+              />
+            </svg>
+
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <p
+                className="text-xs font-bold uppercase tracking-[0.22em] text-sage"
+                style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
+              >
+                2026 · Memory Book
+              </p>
+              <p className="max-w-xs text-sm leading-6 text-ink/60" style={{ fontFamily: "Nunito, system-ui, sans-serif" }}>
+                Snap the arrival, the laughs, the wishes. Every post joins the live wedding album.
+              </p>
             </div>
           </header>
+
+          {/* Upload */}
           <UploadOrchestrator />
+
+          {/* Feed */}
           <GuestbookFeed />
         </section>
         {DEBUG && <DebugPanel />}

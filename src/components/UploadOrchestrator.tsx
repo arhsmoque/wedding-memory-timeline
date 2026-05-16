@@ -92,13 +92,13 @@ export function UploadOrchestrator() {
   }
 
   return (
-    <section className="album-surface grid gap-4 rounded-lg border border-white/70 p-4 sm:p-5">
+    <section className="upload-surface grid gap-4 rounded-xl p-5 sm:p-6" style={{ fontFamily: "Nunito, system-ui, sans-serif" }}>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose">Add a Memory</p>
-          <h2 className="mt-1 font-serif text-3xl text-ink">Post to the wedding timeline</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: "#c46a52" }}>Add a Memory</p>
+          <h2 className="mt-1 font-serif text-2xl italic text-ink" style={{ fontFamily: "Lora, Georgia, serif" }}>Post to the wedding timeline</h2>
         </div>
-        {busy && <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-semibold text-ink/70">Uploading</span>}
+        {busy && <span className="rounded-full px-3 py-1 text-xs font-bold text-ivory" style={{ backgroundColor: "#7a9068" }}>Uploading</span>}
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
         <input

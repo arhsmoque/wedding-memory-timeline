@@ -1,32 +1,37 @@
 @import "tailwindcss";
 
-/* Vibe: private wedding social timeline for mixed-age guests at a live event.
-   Translation: warm editorial memory-book surface, familiar social post layout,
-   clear camera/gallery actions, soft wedding accents, no generic dashboard.
-   Constraints: mobile-first, large tap targets, no autoplay video, compressed media,
-   clear upload states, readable in crowded event conditions. */
+/* Vibe: live wedding guestbook, mixed-age guests, celebratory and warm.
+   Garden Linen aesthetic: aged linen background, sage + terracotta accents,
+   Lora serif headings, polaroid-style memory cards with gentle tilt.
+   No neon, no dashboard, no dark mode — this is a garden party in print. */
+
 @theme {
-  --color-guestbook: #f4eadb;
-  --color-ivory: #fffaf1;
-  --color-ink: #2a211b;
+  --color-guestbook: #f8f0e3;
+  --color-ivory: #fffdf7;
+  --color-ink: #2d1f14;
   --color-gold: #b8893d;
-  --color-rose: #9f5f52;
-  --color-sage: #64735c;
-  --color-paper: #fff7ea;
-  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --color-rose: #c46a52;
+  --color-sage: #7a9068;
+  --color-clay: #c46a52;
+  --color-paper: #fffef9;
+  --font-serif: "Lora", Georgia, serif;
+  --font-sans: "Nunito", system-ui, sans-serif;
 }
 
 html {
   overscroll-behavior: none;
   -webkit-text-size-adjust: 100%;
+  font-family: "Nunito", system-ui, sans-serif;
 }
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 15% 0%, rgb(255 255 255 / 0.8), transparent 30rem),
-    linear-gradient(180deg, #f7efe3 0%, #ead8c2 58%, #d8b992 100%);
-  color: #2a211b;
+  background-color: #f8f0e3;
+  /* linen crosshatch texture */
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgb(140 100 60 / 0.045) 3px, rgb(140 100 60 / 0.045) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 3px, rgb(140 100 60 / 0.045) 3px, rgb(140 100 60 / 0.045) 4px);
+  color: #2d1f14;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -35,33 +40,50 @@ body {
   min-height: 100dvh;
 }
 
+/* ── Header surface ── */
+.album-surface {
+  background: #fffdf7;
+  box-shadow: 0 4px 32px rgb(45 31 20 / 0.10), 0 1px 0 rgb(122 144 104 / 0.18);
+  border: 1px solid rgb(122 144 104 / 0.22) !important;
+}
+
+/* ── Upload panel ── */
+.upload-surface {
+  background: #fffdf7;
+  border: 1.5px dashed rgb(122 144 104 / 0.55);
+  box-shadow: 0 2px 16px rgb(45 31 20 / 0.07);
+}
+
+/* ── Inputs ── */
 .input {
   width: 100%;
-  border-radius: 0.625rem;
-  border: 1px solid rgb(42 33 27 / 0.16);
-  background: rgb(255 250 241 / 0.9);
+  border-radius: 0.5rem;
+  border: 1px solid rgb(45 31 20 / 0.18);
+  background: rgb(255 253 247 / 0.95);
   padding: 0.75rem 0.875rem;
-  color: #2a211b;
+  color: #2d1f14;
   font-size: 16px;
+  font-family: "Nunito", system-ui, sans-serif;
   outline: none;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7);
 }
 
 .input:focus {
-  border-color: #b8893d;
-  box-shadow: 0 0 0 3px rgb(184 137 61 / 0.18);
+  border-color: #7a9068;
+  box-shadow: 0 0 0 3px rgb(122 144 104 / 0.2);
 }
 
 .input:disabled {
   cursor: not-allowed;
-  background: rgb(42 33 27 / 0.06);
-  color: rgb(42 33 27 / 0.58);
+  background: rgb(45 31 20 / 0.06);
+  color: rgb(45 31 20 / 0.5);
 }
 
 .input::placeholder {
-  color: rgb(42 33 27 / 0.42);
+  color: rgb(45 31 20 / 0.38);
 }
 
+/* ── Buttons ── */
 .button {
   display: inline-flex;
   min-height: 2.75rem;
@@ -69,25 +91,27 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.625rem;
-  border: 1px solid rgb(42 33 27 / 0.12);
-  background: #2a211b;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(122 144 104 / 0.3);
+  background: #7a9068;
   padding: 0.75rem 1rem;
-  color: #fffaf1;
+  color: #fffdf7;
   font-weight: 700;
-  box-shadow: 0 10px 24px rgb(42 33 27 / 0.16);
+  font-family: "Nunito", system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px rgb(122 144 104 / 0.35);
   transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
 }
 
 .button:active {
   transform: translateY(1px);
-  box-shadow: 0 6px 16px rgb(42 33 27 / 0.14);
+  box-shadow: 0 2px 8px rgb(122 144 104 / 0.28);
 }
 
 .button:disabled,
 .button-outline:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.52;
 }
 
 .button-outline {
@@ -97,26 +121,73 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.625rem;
-  border: 1px solid rgb(184 137 61 / 0.42);
-  background: rgb(255 250 241 / 0.68);
+  border-radius: 0.5rem;
+  border: 1.5px solid rgb(196 106 82 / 0.5);
+  background: rgb(255 253 247 / 0.75);
   padding: 0.75rem 1rem;
-  color: #2a211b;
+  color: #2d1f14;
   font-weight: 600;
+  font-family: "Nunito", system-ui, sans-serif;
   transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
 }
 
 .button-outline:active {
   transform: translateY(1px);
+  background: rgb(196 106 82 / 0.08);
 }
 
-.album-surface {
-  background:
-    linear-gradient(135deg, rgb(255 250 241 / 0.98), rgb(244 234 219 / 0.92)),
-    repeating-linear-gradient(0deg, rgb(42 33 27 / 0.018) 0 1px, transparent 1px 7px);
-  box-shadow: 0 22px 80px rgb(83 55 30 / 0.18);
+/* ── Polaroid cards ── */
+.polaroid {
+  background: #fffdf7;
+  padding: 10px 10px 52px;
+  box-shadow:
+    0 6px 24px rgb(45 31 20 / 0.14),
+    0 1px 4px rgb(45 31 20 / 0.08);
+  border: 1px solid rgb(45 31 20 / 0.08);
+  transform-origin: center bottom;
+  transition: transform 220ms ease, box-shadow 220ms ease;
 }
 
+.polaroid:hover {
+  box-shadow:
+    0 14px 40px rgb(45 31 20 / 0.18),
+    0 2px 6px rgb(45 31 20 / 0.1);
+}
+
+.polaroid-odd  { transform: rotate(-1.8deg); }
+.polaroid-even { transform: rotate(1.5deg);  }
+
+.polaroid-odd:hover  { transform: rotate(-0.5deg) translateY(-3px); }
+.polaroid-even:hover { transform: rotate(0.5deg)  translateY(-3px); }
+
+/* Disable rotation on mobile — usability first */
+@media (max-width: 639px) {
+  .polaroid-odd,
+  .polaroid-even { transform: none; }
+  .polaroid-odd:hover,
+  .polaroid-even:hover { transform: translateY(-2px); }
+}
+
+/* ── Feed stagger — alternating left/right on desktop ── */
+.feed-stagger {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+@media (min-width: 640px) {
+  .feed-stagger > .polaroid-odd  { align-self: flex-start; margin-left: 2rem; }
+  .feed-stagger > .polaroid-even { align-self: flex-end;   margin-right: 2rem; }
+}
+
+/* ── Wavy rule SVG ── */
+.wavy-rule {
+  overflow: visible;
+  display: block;
+}
+
+/* ── Animations ── */
 @keyframes ken-burns {
   0%   { transform: scale(1) translate(0, 0); }
   100% { transform: scale(1.08) translate(-1%, -1%); }
