@@ -894,8 +894,16 @@
       const auth = firebase.auth();
       const WORKER_URL = "https://malik-sabrina-wedding-upload-worker.arh-homelab.workers.dev";
       let currentUser = null;
-      auth.signInAnonymously().catch(() => {});
-      auth.onAuthStateChanged(user => { currentUser = user; });
+      let authReadyResolve;
+      const authReady = new Promise(resolve => { authReadyResolve = resolve; });
+      auth.onAuthStateChanged(user => {
+        currentUser = user;
+        if (user) authReadyResolve(user);
+      });
+      auth.signInAnonymously().catch(err => {
+        console.error("Anonymous auth failed:", err);
+        authReadyResolve(null);
+      });
 
       const LIMITS = {
         maxPhotos: 5,
@@ -962,7 +970,11 @@
         },
 
         async saveTimelinePost({ name, message, mediaItems }) {
-          if (!currentUser) throw new Error("Authentication pending — please try again in a moment.");
+          const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Sign-in timed out. Please refresh and try again.")), 8000)
+          );
+          const user = await Promise.race([authReady, timeout]);
+          if (!user) throw new Error("Sign-in failed. Please refresh the page and try again.");
           const now = firebase.firestore.FieldValue.serverTimestamp();
           const first = mediaItems[0];
           const isVideo = first?.kind === "video";
@@ -988,7 +1000,7 @@
             likeCount: 0,
             commentCount: 0,
             isDeleted: false,
-            ownerUid: currentUser.uid,
+            ownerUid: user.uid,
             createdAt: now,
             updatedAt: now,
             deletedAt: null
