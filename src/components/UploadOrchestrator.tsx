@@ -1,6 +1,6 @@
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { Camera, ImagePlus, Lock, Save } from "lucide-react";
-import { useState } from "react";
+import { Camera, ImagePlus, Lock, Save, Video } from "lucide-react";
+import { useState, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import { auth, db, ensureGuestAuth } from "../lib/firebase";
 import { deleteCloudinaryUpload, uploadToCloudinary } from "../lib/cloudinary";
@@ -9,9 +9,9 @@ import { validateGuestText } from "../lib/contentPolicy";
 import { canEditGuestName, readGuestProfile, saveGuestName } from "../lib/guestProfile";
 import {
   compressPhoto,
+  prepareVideoForUpload,
   recordVideoUpload,
   splitAndValidateSelection,
-  validateVideoFile,
 } from "../lib/mediaPolicy";
 
 export function UploadOrchestrator() {
@@ -20,6 +20,7 @@ export function UploadOrchestrator() {
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState("");
   const nameEditable = canEditGuestName(profile);
 
   function persistName() {
@@ -41,17 +42,22 @@ export function UploadOrchestrator() {
     if (!savedName) return;
     setBusy(true);
     setProgress(0);
+    setPhase("Checking media...");
     const uploaded: UploadedMedia[] = [];
     try {
       await ensureGuestAuth();
       const safeCaption = validateGuestText(caption, 500);
       const { photos, videos } = splitAndValidateSelection(Array.from(fileList));
-      const filesToUpload = videos.length
-        ? [videos[0]]
+      const preparedVideo = videos.length ? await prepareVideoForUpload(videos[0]) : null;
+      if (preparedVideo?.trimmed) toast.info("Video trimmed to fit the event limit.");
+      if (preparedVideo?.warning) toast.info(preparedVideo.warning);
+      setPhase(videos.length ? "Preparing video upload..." : "Compressing photos...");
+      const filesToUpload = preparedVideo
+        ? [preparedVideo.file]
         : await Promise.all(photos.map((file) => compressPhoto(file)));
-      if (videos.length) await validateVideoFile(videos[0]);
 
       for (const file of filesToUpload) {
+        setPhase("Uploading...");
         const media = await uploadToCloudinary(file, (pct) => {
           const itemProgress = pct / filesToUpload.length;
           setProgress(Math.round((uploaded.length / filesToUpload.length) * 100 + itemProgress));
@@ -60,6 +66,7 @@ export function UploadOrchestrator() {
       }
 
       const first = uploaded[0];
+      setPhase("Writing to timeline...");
       try {
         await addDoc(collection(db, "photobook"), {
           ...first,
@@ -83,12 +90,21 @@ export function UploadOrchestrator() {
       if (videos.length) recordVideoUpload();
       setCaption("");
       setProgress(0);
+      setPhase("");
       toast.success(uploaded.length > 1 ? "Photo set added!" : "Memory added!");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed.");
     } finally {
       setBusy(false);
+      setPhase("");
     }
+  }
+
+  function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    void onFiles(input.files).finally(() => {
+      input.value = "";
+    });
   }
 
   return (
@@ -122,22 +138,37 @@ export function UploadOrchestrator() {
         onChange={(e) => setCaption(e.target.value)}
         placeholder="Caption or wish (optional)"
       />
-      {busy && progress > 0 && (
-        <div className="h-2 overflow-hidden rounded-full bg-ink/10">
-          <div className="h-full rounded-full bg-gold transition-all duration-300" style={{ width: `${progress}%` }} />
+      {busy && (progress > 0 || phase) && (
+        <div className="grid gap-1.5">
+          <div className="h-2 overflow-hidden rounded-full bg-ink/10">
+            <div className="h-full rounded-full bg-gold transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+          {phase && <p className="text-xs text-ink/55">{phase}</p>}
         </div>
       )}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <label className={`button ${busy ? "pointer-events-none opacity-60" : ""}`}>
           <Camera size={18} />
-          {busy ? "Uploading..." : "Camera"}
+          {busy ? "Busy" : "Photo"}
           <input
             className="hidden"
             type="file"
-            accept="image/*,video/*"
+            accept="image/*"
             capture="environment"
             disabled={busy}
-            onChange={(e) => void onFiles(e.target.files)}
+            onChange={handleInputChange}
+          />
+        </label>
+        <label className={`button-outline ${busy ? "pointer-events-none opacity-60" : ""}`}>
+          <Video size={18} />
+          Video
+          <input
+            className="hidden"
+            type="file"
+            accept="video/*"
+            capture="environment"
+            disabled={busy}
+            onChange={handleInputChange}
           />
         </label>
         <label className={`button-outline ${busy ? "pointer-events-none opacity-60" : ""}`}>
@@ -149,7 +180,7 @@ export function UploadOrchestrator() {
             accept="image/*,video/*"
             multiple
             disabled={busy}
-            onChange={(e) => void onFiles(e.target.files)}
+            onChange={handleInputChange}
           />
         </label>
       </div>
