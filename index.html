@@ -532,9 +532,9 @@
         width: 100%; overflow: hidden;
         background: #1a1612;
         position: relative;
+        aspect-ratio: 4/3;
       }
-      .post-media.portrait { aspect-ratio: 4/5; }
-      .post-media.landscape { aspect-ratio: 4/3; }
+      .post-media.portrait { aspect-ratio: 3/4; }
 
       .media-blur-bg {
         position: absolute !important;
@@ -1692,6 +1692,22 @@
         else els.timeline.appendChild(article);
         attachFirestoreInteractions(article, id);
         attachPostInteractions(article);
+        fixMediaAspectRatios(article);
+      }
+
+      function fixMediaAspectRatios(root) {
+        root.querySelectorAll(".post-media img:not(.media-blur-bg)").forEach(img => {
+          const container = img.closest(".post-media");
+          if (!container) return;
+          const apply = () => {
+            if (!img.naturalWidth || !img.naturalHeight) return;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            const capped = Math.max(9 / 16, Math.min(ratio, 16 / 9));
+            container.style.aspectRatio = String(capped);
+          };
+          if (img.complete && img.naturalWidth) apply();
+          else img.addEventListener("load", apply, { once: true });
+        });
       }
 
       function attachPostInteractions(root = document) {
