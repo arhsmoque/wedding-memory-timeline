@@ -4,7 +4,7 @@ compatibility_date = "2026-05-16"
 account_id = "dc3bfa957bdf216b7cc45214455aaa72"
 
 [vars]
-ALLOWED_ORIGIN = "http://localhost:5173"
+ALLOWED_ORIGIN = "https://arhsmoque.github.io"
 CLOUDINARY_CLOUD_NAME = "dl5oqxuo1"
 FIREBASE_PROJECT_NUMBER = ""
 FIREBASE_APP_ID_ALLOWLIST = ""
