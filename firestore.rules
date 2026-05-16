@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function config() {
+      return get(/databases/$(database)/documents/settings/config).data;
+    }
+
+    function eventOpen() {
+      return !(config().locked == true);
+    }
+
+    function validEntryCreate() {
+      return request.resource.data.keys().hasOnly([
+        'uploaderName', 'caption', 'mediaUrl', 'mediaPublicId', 'mediaType',
+        'width', 'height', 'duration', 'createdAt', 'updatedAt', 'deletedAt',
+        'isDeleted', 'likeCount', 'commentCount', 'ownerUid',
+        'mediaItems', 'mediaCount', 'postType'
+      ])
+      && request.resource.data.ownerUid == request.auth.uid
+      && request.resource.data.uploaderName is string
+      && request.resource.data.uploaderName.size() >= 2
+      && request.resource.data.uploaderName.size() <= 40
+      && request.resource.data.caption is string
+      && request.resource.data.caption.size() <= 500
+      && request.resource.data.mediaType in ['image', 'video']
+      && request.resource.data.mediaCount >= 1
+      && request.resource.data.mediaCount <= 5
+      && request.resource.data.likeCount == 0
+      && request.resource.data.commentCount == 0
+      && request.resource.data.isDeleted == false;
+    }
+
+    function ownerUpdateFields() {
+      return request.resource.data.diff(resource.data)
+        .affectedKeys().hasOnly(['caption', 'updatedAt', 'isDeleted', 'deletedAt']);
+    }
+
+    function socialCountUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'updatedAt'])
+        && (request.resource.data.likeCount == resource.data.likeCount + 1
+          || request.resource.data.likeCount == resource.data.likeCount - 1);
+    }
+
+    function commentCountUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'updatedAt'])
+        && (request.resource.data.commentCount == resource.data.commentCount + 1
+          || request.resource.data.commentCount == resource.data.commentCount - 1);
+    }
+
+    function validCommentCreate() {
+      return request.resource.data.keys().hasOnly([
+        'commenterName', 'text', 'ownerUid', 'editCount',
+        'isDeleted', 'createdAt', 'updatedAt', 'deletedAt'
+      ])
+      && request.resource.data.ownerUid == request.auth.uid
+      && request.resource.data.commenterName is string
+      && request.resource.data.commenterName.size() >= 2
+      && request.resource.data.commenterName.size() <= 40
+      && request.resource.data.text is string
+      && request.resource.data.text.size() > 0
+      && request.resource.data.text.size() <= 500
+      && request.resource.data.editCount == 0
+      && request.resource.data.isDeleted == false;
+    }
+
+    function ownerCommentUpdate() {
+      return resource.data.ownerUid == request.auth.uid && eventOpen() && (
+        (
+          resource.data.editCount == 0
+          && request.resource.data.editCount == 1
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updatedAt', 'editCount'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+        )
+        || (
+          request.resource.data.isDeleted == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'updatedAt', 'deletedAt'])
+        )
+      );
+    }
+
+    match /settings/config {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /debug_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['level','message','stack','context','createdAt'])
+        && request.resource.data.level in ['error','warn','manual'];
+      allow update, delete: if false;
+    }
+
+    match /photobook/{entryId} {
+      allow read: if resource.data.isDeleted != true || isAdmin();
+      allow create: if signedIn() && eventOpen() && validEntryCreate();
+      allow update: if signedIn() && (
+        isAdmin()
+        || (resource.data.ownerUid == request.auth.uid && eventOpen() && ownerUpdateFields())
+        || (eventOpen() && socialCountUpdate())
+        || (eventOpen() && commentCountUpdate())
+      );
+      allow delete: if false;
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if signedIn() && eventOpen() && validCommentCreate();
+        allow update: if signedIn() && (
+          isAdmin()
+          || ownerCommentUpdate()
+        );
+        allow delete: if false;
+      }
+
+      match /likes/{uid} {
+        allow read: if true;
+        allow create: if signedIn() && eventOpen() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['createdAt', 'likerName'])
+          && request.resource.data.likerName is string
+          && request.resource.data.likerName.size() >= 2
+          && request.resource.data.likerName.size() <= 40;
+        allow delete: if signedIn() && eventOpen() && uid == request.auth.uid;
+        allow update: if false;
+      }
+    }
+  }
+}

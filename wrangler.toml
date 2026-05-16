@@ -1,0 +1,22 @@
+name = "ash-2026-photobook-upload-worker"
+main = "worker/src/index.ts"
+compatibility_date = "2026-05-16"
+account_id = "dc3bfa957bdf216b7cc45214455aaa72"
+
+[vars]
+ALLOWED_ORIGIN = "http://localhost:5173"
+CLOUDINARY_CLOUD_NAME = "dl5oqxuo1"
+FIREBASE_PROJECT_NUMBER = ""
+FIREBASE_APP_ID_ALLOWLIST = ""
+# Set to "true" once App Check reCAPTCHA is configured in Firebase Console
+APPCHECK_ENFORCEMENT = "false"
+APPCHECK_JWKS_URL = "https://firebaseappcheck.googleapis.com/v1/jwks"
+MAX_UPLOAD_BYTES = "10485760"
+ALLOWED_MEDIA_TYPES = "image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+RATE_LIMIT_WINDOW_SECONDS = "60"
+RATE_LIMIT_MAX = "20"
+RATE_LIMIT_REQUIRED = "false"
+
+# Secrets set via wrangler secret put:
+#   wrangler secret put CLOUDINARY_API_SECRET
+#   wrangler secret put CLOUDINARY_API_KEY
