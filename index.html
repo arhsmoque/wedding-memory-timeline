@@ -171,43 +171,90 @@
         border-color: var(--primary);
       }
 
-      /* Composer — must override .post's 12-col grid */
-      .composer {
-        display: block !important;
+      /* Share FAB */
+      .share-fab {
+        position: fixed;
+        bottom: max(28px, env(safe-area-inset-bottom));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 300;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 16px 40px;
+        border-radius: 999px;
+        font-family: var(--body);
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        box-shadow: 0 8px 28px rgba(188, 108, 37, 0.45);
+        touch-action: manipulation;
+        white-space: nowrap;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .share-fab:active { transform: translateX(-50%) scale(0.97); }
+
+      /* Composer modal */
+      .composer-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 400;
+        display: none;
+        background: rgba(40, 54, 24, 0.55);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(80px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      }
+
+      .composer-modal.active { display: block; }
+
+      .composer-panel {
         background: var(--paper);
-        border: 1px solid var(--muted);
-        padding: 24px 20px;
-        margin-bottom: 100px;
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 28px 24px 32px;
         position: relative;
       }
 
       @media (min-width: 768px) {
-        .composer { padding: 40px; }
+        .composer-panel { padding: 40px; }
       }
 
-      .composer::before {
-        content: '';
-        position: absolute;
-        top: -10px; left: -10px; right: -10px; bottom: -10px;
-        border: 1px dashed var(--accent);
-        pointer-events: none;
-        opacity: 0.3;
+      .composer-modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
       }
 
       .composer-title {
         font-family: var(--display);
-        font-size: 32px;
+        font-size: 28px;
         font-style: italic;
         color: var(--primary);
-        margin-bottom: 10px;
-        text-align: center;
       }
 
       .composer-hint {
-        text-align: center;
         color: var(--secondary);
         font-size: 14px;
-        margin-bottom: 40px;
+        margin-bottom: 28px;
+      }
+
+      /* Empty state */
+      .empty-state {
+        text-align: center;
+        padding: 80px 20px 120px;
+      }
+
+      .empty-state p {
+        font-family: var(--display);
+        font-size: clamp(22px, 5vw, 32px);
+        font-style: italic;
+        color: var(--secondary);
+        margin-bottom: 32px;
+        line-height: 1.4;
       }
 
       .form-grid {
@@ -708,14 +755,27 @@
         </div>
       </section>
 
-      <section class="composer post visible">
-        <h2 class="composer-title">Share a Memory</h2>
-        <p class="composer-hint">Your name is saved locally. Add photos, clips, or just a heartfelt wish.</p>
+      <section class="timeline" aria-label="Timeline feed">
+        <div id="emptyState" class="empty-state">
+          <p>The timeline is waiting.<br>Be the first to share a memory tonight.</p>
+        </div>
+      </section>
+    </div>
+
+    <button id="shareBtn" class="share-fab" type="button">+ Share a Memory</button>
+
+    <div id="composerModal" class="composer-modal" role="dialog" aria-modal="true" aria-label="Share a memory">
+      <div class="composer-panel">
+        <div class="composer-modal-head">
+          <h2 class="composer-title">Share a Memory</h2>
+          <button id="composerClose" class="viewer-close" type="button">Close</button>
+        </div>
+        <p class="composer-hint">Your name is saved on this device. Add photos, a short clip, or a heartfelt wish.</p>
 
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Who is sharing?</label>
-            <input id="guestName" class="input" placeholder="e.g. Auntie Julie or Table 12" maxlength="40" autocomplete="name" />
+            <input id="guestName" class="input" placeholder="Your name or table number" maxlength="40" autocomplete="name" />
           </div>
           <div class="form-group">
             <label class="form-label">Your Message</label>
@@ -729,7 +789,7 @@
         <div id="mediaPreview" class="media-preview" aria-live="polite">
           <div class="media-preview-head">
             <span id="mediaPreviewTitle">Selected media</span>
-            <span id="mediaPreviewRule">Photos up to 5 · video one clip</span>
+            <span id="mediaPreviewRule">Up to 5 photos · one video clip</span>
           </div>
           <div id="mediaPreviewGrid" class="media-preview-grid"></div>
           <div id="trimPanel" class="trim-panel">
@@ -757,82 +817,7 @@
           <button id="addMediaBtn" class="btn" style="background: transparent;" type="button">Gallery</button>
           <button id="publishBtn" class="btn btn-primary" type="button">Publish to Timeline</button>
         </div>
-      </section>
-
-      <section class="timeline" aria-label="Timeline feed">
-        
-        <!-- Post 1: Portrait Art -->
-        <article class="post">
-          <div class="post-media-container">
-            <div class="archive-stamp">
-              <span>REC</span>
-              <span style="font-size: 14px; margin: 2px 0;">2026</span>
-              <span>M&S</span>
-            </div>
-            <div class="post-media portrait">
-              <div class="media-art art-1"><div class="art-text">The Entrance</div></div>
-            </div>
-          </div>
-          <div class="post-content">
-            <div class="post-uploader">Auntie Julie</div>
-            <h3>I caught the first moment everyone turned toward the entrance. The whole room went quiet.</h3>
-            
-            <div class="post-meta">
-              <button class="interaction active" type="button"><span>✦</span> <b>24</b> Treasured</button>
-            </div>
-          </div>
-        </article>
-
-        <!-- Post 2: Multi-media Art -->
-        <article class="post">
-          <div class="post-media-container">
-            <div class="archive-stamp">
-              <span>GUEST</span>
-              <span style="font-size: 14px; margin: 2px 0;">CAM</span>
-              <span>M&S</span>
-            </div>
-            <div class="post-media landscape">
-              <div class="multi-media">
-                <div class="media-art art-2"><div class="art-text">Table 12</div></div>
-                <div class="stack">
-                  <div class="media-art art-3"></div>
-                  <div class="more" data-more="+3"><div class="media-art art-4"><div class="art-text">Joy</div></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="post-content">
-            <div class="post-uploader">Farah & Nadia</div>
-            <h3>Table 12 reporting in. The atmosphere and the food are incredible tonight.</h3>
-            
-            <div class="post-meta">
-              <button class="interaction" type="button"><span>✧</span> <b>41</b> Treasured</button>
-            </div>
-          </div>
-        </article>
-
-        <!-- Post 3: Abstract Event Art -->
-        <article class="post">
-          <div class="post-media-container">
-            <div class="archive-stamp">
-              <span>LIVE</span>
-              <span style="font-size: 14px; margin: 2px 0;">VIBE</span>
-              <span>M&S</span>
-            </div>
-            <div class="post-media landscape">
-              <div class="media-art art-anim"><div class="art-text">First Dance</div></div>
-            </div>
-          </div>
-          <div class="post-content">
-            <div class="post-uploader">Zara</div>
-            <h3>The floor opened and suddenly everyone became brave.</h3>
-            <div class="post-meta">
-              <button class="interaction active" type="button"><span>✦</span> <b>18</b> Treasured</button>
-            </div>
-          </div>
-        </article>
-
-      </section>
+      </div>
     </div>
 
     <div id="viewer" class="viewer" role="dialog" aria-modal="true" aria-label="Media viewer">
@@ -925,8 +910,22 @@
         viewer: document.querySelector("#viewer"),
         viewerTitle: document.querySelector("#viewerTitle"),
         viewerBody: document.querySelector("#viewerBody"),
-        viewerClose: document.querySelector("#viewerClose")
+        viewerClose: document.querySelector("#viewerClose"),
+        composerModal: document.querySelector("#composerModal"),
+        shareBtn: document.querySelector("#shareBtn"),
+        composerClose: document.querySelector("#composerClose"),
+        emptyState: document.querySelector("#emptyState")
       };
+
+      function openComposer() {
+        els.composerModal.classList.add("active");
+        document.body.style.overflow = "hidden";
+        els.guestName.focus();
+      }
+      function closeComposer() {
+        els.composerModal.classList.remove("active");
+        document.body.style.overflow = "";
+      }
 
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -1350,6 +1349,7 @@
             ${downloadLinks ? `<p class="stage-note">${downloadLinks}</p>` : ""}
           </div>
         `;
+        els.emptyState.style.display = "none";
         els.timeline.prepend(article);
         attachPostInteractions(article);
         article.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1493,6 +1493,7 @@
           const saved = await AppAdapters.saveTimelinePost({ ...payload, mediaItems });
           createPost(saved);
           clearComposer(true, false);
+          closeComposer();
           setStatus("Published to the timeline. Upload controls are ready again.");
         } catch (error) {
           setStatus(error instanceof Error ? error.message : "Could not publish this memory.", true);
@@ -1501,12 +1502,18 @@
         }
       });
 
+      els.shareBtn.addEventListener("click", openComposer);
+      els.composerClose.addEventListener("click", closeComposer);
+      els.composerModal.addEventListener("click", (event) => {
+        if (event.target === els.composerModal) closeComposer();
+      });
+
       els.viewerClose.addEventListener("click", closeViewer);
       els.viewer.addEventListener("click", (event) => {
         if (event.target === els.viewer) closeViewer();
       });
       document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") closeViewer();
+        if (event.key === "Escape") { closeViewer(); closeComposer(); }
       });
 
       const savedName = localStorage.getItem("malik_sabrina_guest_name");
