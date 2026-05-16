@@ -125,7 +125,7 @@
         position: sticky;
         top: max(16px, env(safe-area-inset-top));
         z-index: 100;
-        margin-bottom: 60px;
+        margin-bottom: 32px;
         display: flex;
         justify-content: center;
         gap: 10px;
@@ -743,6 +743,27 @@
       }
       .comment-input:focus { border-color: var(--accent); outline: none; }
       .comment-btn { font-size: 13px; }
+      .feed-divider {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 0 0 56px;
+      }
+      .feed-divider-line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(to right, transparent, var(--accent), transparent);
+        opacity: 0.5;
+      }
+      .feed-divider-mark {
+        font-family: var(--stamp);
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        color: var(--accent);
+        white-space: nowrap;
+        opacity: 0.7;
+      }
+
       .sync-badge {
         position: fixed; bottom: max(90px, calc(80px + env(safe-area-inset-bottom)));
         right: 16px; font-size: 11px; font-family: var(--body); font-weight: 700;
@@ -774,6 +795,12 @@
           <p>Scan the QR code on your table to add your photos and wishes to the live timeline.</p>
         </div>
       </section>
+
+      <div class="feed-divider" aria-hidden="true">
+        <span class="feed-divider-line"></span>
+        <span class="feed-divider-mark">✦ Memories ✦</span>
+        <span class="feed-divider-line"></span>
+      </div>
 
       <section class="timeline" aria-label="Timeline feed">
         <div id="emptyState" class="empty-state">
