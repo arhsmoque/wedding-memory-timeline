@@ -878,7 +878,6 @@
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
     <script>
@@ -891,19 +890,7 @@
         appId: "1:328228907150:web:fb4d2780b40bb8403ec1df"
       });
       const db = firebase.firestore();
-      const auth = firebase.auth();
       const WORKER_URL = "https://malik-sabrina-wedding-upload-worker.arh-homelab.workers.dev";
-      let currentUser = null;
-      let authReadyResolve;
-      const authReady = new Promise(resolve => { authReadyResolve = resolve; });
-      auth.onAuthStateChanged(user => {
-        currentUser = user;
-        if (user) authReadyResolve(user);
-      });
-      auth.signInAnonymously().catch(err => {
-        console.error("Anonymous auth failed:", err);
-        authReadyResolve(null);
-      });
 
       const LIMITS = {
         maxPhotos: 5,
@@ -970,11 +957,6 @@
         },
 
         async saveTimelinePost({ name, message, mediaItems }) {
-          const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Sign-in timed out. Please refresh and try again.")), 8000)
-          );
-          const user = await Promise.race([authReady, timeout]);
-          if (!user) throw new Error("Sign-in failed. Please refresh the page and try again.");
           const now = firebase.firestore.FieldValue.serverTimestamp();
           const first = mediaItems[0];
           const isVideo = first?.kind === "video";
@@ -1000,7 +982,6 @@
             likeCount: 0,
             commentCount: 0,
             isDeleted: false,
-            ownerUid: user.uid,
             createdAt: now,
             updatedAt: now,
             deletedAt: null
@@ -1554,7 +1535,6 @@
       }
 
       async function addComment(postId, root) {
-        if (!currentUser) return;
         const input = root.querySelector(".comment-input");
         const text = (input?.value || "").trim();
         if (!text) return;
@@ -1565,9 +1545,6 @@
           await db.collection("wedding_timeline").doc(postId).collection("comments").add({
             commenterName: name,
             text,
-            ownerUid: currentUser.uid,
-            editCount: 0,
-            isDeleted: false,
             createdAt: now,
             updatedAt: now,
             deletedAt: null
@@ -1588,26 +1565,14 @@
         const treasuredBtn = root.querySelector(".treasured-btn");
         if (treasuredBtn) {
           treasuredBtn.dataset.ready = "1";
-          if (currentUser) {
-            db.collection("wedding_timeline").doc(postId).collection("likes").doc(currentUser.uid).get()
-              .then(doc => {
-                if (doc.exists) {
-                  treasuredBtn.classList.add("active");
-                  const icon = treasuredBtn.querySelector("span");
-                  if (icon) icon.textContent = "✦";
-                }
-              }).catch(() => {});
-          }
           treasuredBtn.addEventListener("click", async () => {
-            if (!currentUser) return;
             const liked = treasuredBtn.classList.contains("active");
-            const likeRef = db.collection("wedding_timeline").doc(postId).collection("likes").doc(currentUser.uid);
+            const likeRef = db.collection("wedding_timeline").doc(postId).collection("likes").doc(postId + "_" + Date.now());
             const postRef = db.collection("wedding_timeline").doc(postId);
             const now = firebase.firestore.FieldValue.serverTimestamp();
             try {
               treasuredBtn.disabled = true;
               if (liked) {
-                await likeRef.delete();
                 await postRef.update({ likeCount: firebase.firestore.FieldValue.increment(-1), updatedAt: now });
               } else {
                 const name = els.guestName.value.trim() || "Guest";

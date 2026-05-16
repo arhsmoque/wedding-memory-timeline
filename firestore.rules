@@ -101,65 +101,23 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    function validWeddingCreate() {
-      return request.resource.data.keys().hasOnly([
-        'uploaderName', 'caption', 'mediaUrl', 'mediaPublicId', 'mediaType',
-        'width', 'height', 'duration', 'createdAt', 'updatedAt', 'deletedAt',
-        'isDeleted', 'likeCount', 'commentCount', 'ownerUid',
-        'mediaItems', 'mediaCount', 'postType'
-      ])
-      && request.resource.data.ownerUid == request.auth.uid
-      && request.resource.data.uploaderName is string
-      && request.resource.data.uploaderName.size() >= 2
-      && request.resource.data.uploaderName.size() <= 40
-      && request.resource.data.caption is string
-      && request.resource.data.caption.size() <= 500
-      && request.resource.data.mediaCount >= 0
-      && request.resource.data.mediaCount <= 5
-      && request.resource.data.likeCount == 0
-      && request.resource.data.commentCount == 0
-      && request.resource.data.isDeleted == false;
-    }
-
-    function ownerWeddingCommentUpdate() {
-      return resource.data.ownerUid == request.auth.uid && (
-        (resource.data.editCount == 0
-          && request.resource.data.editCount == 1
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updatedAt', 'editCount'])
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 500)
-        || (request.resource.data.isDeleted == true
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'updatedAt', 'deletedAt']))
-      );
-    }
-
     match /wedding_timeline/{entryId} {
-      allow read: if resource.data.isDeleted != true || isAdmin();
-      allow create: if signedIn() && validWeddingCreate();
-      allow update: if signedIn() && (
-        isAdmin()
-        || (resource.data.ownerUid == request.auth.uid && ownerUpdateFields())
-        || socialCountUpdate()
-        || commentCountUpdate()
-      );
+      allow read: if true;
+      allow create: if request.resource.data.uploaderName is string
+        && request.resource.data.uploaderName.size() >= 2
+        && request.resource.data.uploaderName.size() <= 40
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 500;
+      allow update: if true;
       allow delete: if false;
 
       match /comments/{commentId} {
-        allow read: if true;
-        allow create: if signedIn() && validCommentCreate();
-        allow update: if signedIn() && (isAdmin() || ownerWeddingCommentUpdate());
-        allow delete: if false;
+        allow read, create: if true;
+        allow update, delete: if false;
       }
 
-      match /likes/{uid} {
-        allow read: if true;
-        allow create: if signedIn() && uid == request.auth.uid
-          && request.resource.data.keys().hasOnly(['createdAt', 'likerName'])
-          && request.resource.data.likerName is string
-          && request.resource.data.likerName.size() >= 2
-          && request.resource.data.likerName.size() <= 40;
-        allow delete: if signedIn() && uid == request.auth.uid;
+      match /likes/{likeId} {
+        allow read, create, delete: if true;
         allow update: if false;
       }
     }
