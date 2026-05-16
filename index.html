@@ -731,6 +731,26 @@
         object-fit: contain;
         display: block;
       }
+
+      .post-time { font-size: 11px; font-weight: 400; margin-left: 8px; opacity: 0.55; }
+      .comment-time { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; opacity: 0.7; }
+      .comment-empty { font-style: italic; color: var(--muted); font-size: 13px; margin: 0; }
+      .comment-input-row { display: flex; gap: 8px; margin-top: 16px; }
+      .comment-input {
+        flex: 1; padding: 8px 12px; border: 1px solid var(--muted);
+        border-radius: 8px; font-size: 14px; background: rgba(255,255,255,0.8);
+        font-family: var(--body);
+      }
+      .comment-input:focus { border-color: var(--accent); outline: none; }
+      .comment-btn { font-size: 13px; }
+      .sync-badge {
+        position: fixed; bottom: max(90px, calc(80px + env(safe-area-inset-bottom)));
+        right: 16px; font-size: 11px; font-family: var(--body); font-weight: 700;
+        background: var(--secondary); color: #fff; padding: 4px 10px; border-radius: 20px;
+        opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 200;
+        letter-spacing: 0.05em;
+      }
+      .sync-badge.show { opacity: 1; }
     </style>
   </head>
   <body>
@@ -830,7 +850,26 @@
       </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
     <script>
+      firebase.initializeApp({
+        apiKey: "AIzaSyB8j-jHo2N341ieW4AVCdPL3ipn4Ss8sYQ",
+        authDomain: "ash-2026-photobook.firebaseapp.com",
+        projectId: "ash-2026-photobook",
+        storageBucket: "ash-2026-photobook.firebasestorage.app",
+        messagingSenderId: "328228907150",
+        appId: "1:328228907150:web:fb4d2780b40bb8403ec1df"
+      });
+      const db = firebase.firestore();
+      const auth = firebase.auth();
+      const WORKER_URL = "https://malik-sabrina-wedding-upload-worker.arh-homelab.workers.dev";
+      let currentUser = null;
+      auth.signInAnonymously().catch(() => {});
+      auth.onAuthStateChanged(user => { currentUser = user; });
+
       const LIMITS = {
         maxPhotos: 5,
         maxVideoBytes: 10 * 1024 * 1024,
@@ -856,29 +895,77 @@
       };
 
       const AppAdapters = {
-        // Replace this with Cloudinary signed upload flow:
-        // 1. fetch Worker signature with App Check token
-        // 2. upload each file to Cloudinary
-        // 3. return [{ file, url, kind, publicId, width, height, duration }]
         async uploadMediaBatch({ items, onProgress }) {
-          for (const step of [15, 32, 54, 72, 91, 100]) {
-            await new Promise((resolve) => window.setTimeout(resolve, 120));
-            onProgress(step);
+          if (!items.length) { onProgress(100); return []; }
+          const results = [];
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const sigRes = await fetch(WORKER_URL, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ fileName: item.file.name, contentType: item.file.type, size: item.file.size })
+            });
+            if (!sigRes.ok) {
+              const e = await sigRes.json().catch(() => ({}));
+              throw new Error(e.error || "Upload service unavailable. Please try again.");
+            }
+            const { uploadUrl, publicId, fields } = await sigRes.json();
+            const form = new FormData();
+            for (const [k, v] of Object.entries(fields)) form.append(k, String(v));
+            form.append("file", item.file);
+            const cloudRes = await new Promise((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open("POST", uploadUrl);
+              xhr.onload = () => xhr.status < 300
+                ? resolve(JSON.parse(xhr.responseText))
+                : reject(new Error("Upload to cloud failed. Please try again."));
+              xhr.onerror = () => reject(new Error("Network error during upload."));
+              xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                  const base = (i / items.length) * 90;
+                  onProgress(Math.round(base + (e.loaded / e.total) * (90 / items.length)));
+                }
+              };
+              xhr.send(form);
+            });
+            results.push({ ...item, uploadedUrl: cloudRes.secure_url, publicId: cloudRes.public_id });
           }
-          return items.map((item) => ({
-            ...item,
-            uploadedUrl: item.url,
-            publicId: `local-preview/${Date.now()}-${item.file.name}`
-          }));
+          onProgress(100);
+          return results;
         },
 
-        // Replace this with Firestore addDoc/setDoc after Cloudinary upload.
-        async saveTimelinePost(post) {
-          return {
-            id: `local-${Date.now()}`,
-            createdAt: new Date().toISOString(),
-            ...post
-          };
+        async saveTimelinePost({ name, message, mediaItems }) {
+          if (!currentUser) throw new Error("Authentication pending — please try again in a moment.");
+          const now = firebase.firestore.FieldValue.serverTimestamp();
+          const first = mediaItems[0];
+          const isVideo = first?.kind === "video";
+          await db.collection("wedding_timeline").add({
+            uploaderName: name,
+            caption: message || "",
+            mediaUrl: first?.uploadedUrl || "",
+            mediaPublicId: first?.publicId || "",
+            mediaType: isVideo ? "video" : "image",
+            width: first?.metadata?.width || 0,
+            height: first?.metadata?.height || 0,
+            duration: first?.metadata?.duration || 0,
+            mediaItems: mediaItems.map(m => ({
+              url: m.uploadedUrl,
+              publicId: m.publicId,
+              kind: m.kind,
+              width: m.metadata?.width || 0,
+              height: m.metadata?.height || 0,
+              duration: m.metadata?.duration || 0
+            })),
+            mediaCount: mediaItems.length,
+            postType: mediaItems.length > 1 ? "gallery" : (isVideo ? "video" : "photo"),
+            likeCount: 0,
+            commentCount: 0,
+            isDeleted: false,
+            ownerUid: currentUser.uid,
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null
+          });
         }
       };
 
@@ -1355,19 +1442,6 @@
         article.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
-      async function simulateUpload() {
-        setBusy(true);
-        els.progressTrack.classList.add("active");
-        setStatus("Preparing upload...");
-        const mediaItems = await AppAdapters.uploadMediaBatch({
-          items: state.files,
-          onProgress(step) {
-          els.progressBar.style.width = `${step}%`;
-          setStatus(step < 100 ? "Uploading..." : "Writing to timeline...");
-          }
-        });
-        return mediaItems;
-      }
 
       function clearComposer(keepName = true, revokeUrls = true) {
         if (!keepName) els.guestName.value = "";
@@ -1402,6 +1476,185 @@
       function closeViewer() {
         els.viewer.classList.remove("active");
         els.viewerBody.innerHTML = "";
+      }
+
+      function formatTimestamp(date) {
+        const diff = Date.now() - date.getTime();
+        if (diff < 60000) return "just now";
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+        return date.toLocaleDateString("en-MY", { day: "numeric", month: "short" });
+      }
+
+      function updatePostLikeCount(postId, count) {
+        const article = els.timeline.querySelector(`[data-post-id="${postId}"]`);
+        if (!article) return;
+        const b = article.querySelector(".treasured-btn b");
+        if (b) b.textContent = String(count || 0);
+      }
+
+      function loadComments(postId, listEl) {
+        db.collection("wedding_timeline").doc(postId).collection("comments")
+          .where("isDeleted", "==", false)
+          .orderBy("createdAt", "asc")
+          .onSnapshot(snapshot => {
+            if (!snapshot.docs.length) {
+              listEl.innerHTML = `<p class="comment-empty">No comments yet. Be the first!</p>`;
+              return;
+            }
+            listEl.innerHTML = snapshot.docs.map(doc => {
+              const d = doc.data();
+              const ts = d.createdAt?.toDate ? formatTimestamp(d.createdAt.toDate()) : "";
+              return `<div class="comment-bubble">
+                <span class="comment-name">${escapeHtml(d.commenterName)}</span>
+                <p class="comment-text">${escapeHtml(d.text)}</p>
+                ${ts ? `<time class="comment-time">${ts}</time>` : ""}
+              </div>`;
+            }).join("");
+          });
+      }
+
+      async function addComment(postId, root) {
+        if (!currentUser) return;
+        const input = root.querySelector(".comment-input");
+        const text = (input?.value || "").trim();
+        if (!text) return;
+        const name = els.guestName.value.trim() || "Guest";
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+        try {
+          if (input) input.disabled = true;
+          await db.collection("wedding_timeline").doc(postId).collection("comments").add({
+            commenterName: name,
+            text,
+            ownerUid: currentUser.uid,
+            editCount: 0,
+            isDeleted: false,
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null
+          });
+          await db.collection("wedding_timeline").doc(postId).update({
+            commentCount: firebase.firestore.FieldValue.increment(1),
+            updatedAt: now
+          });
+          if (input) input.value = "";
+        } catch (e) {
+          console.error("Comment error:", e);
+        } finally {
+          if (input) input.disabled = false;
+        }
+      }
+
+      function attachFirestoreInteractions(root, postId) {
+        const treasuredBtn = root.querySelector(".treasured-btn");
+        if (treasuredBtn) {
+          treasuredBtn.dataset.ready = "1";
+          if (currentUser) {
+            db.collection("wedding_timeline").doc(postId).collection("likes").doc(currentUser.uid).get()
+              .then(doc => {
+                if (doc.exists) {
+                  treasuredBtn.classList.add("active");
+                  const icon = treasuredBtn.querySelector("span");
+                  if (icon) icon.textContent = "✦";
+                }
+              }).catch(() => {});
+          }
+          treasuredBtn.addEventListener("click", async () => {
+            if (!currentUser) return;
+            const liked = treasuredBtn.classList.contains("active");
+            const likeRef = db.collection("wedding_timeline").doc(postId).collection("likes").doc(currentUser.uid);
+            const postRef = db.collection("wedding_timeline").doc(postId);
+            const now = firebase.firestore.FieldValue.serverTimestamp();
+            try {
+              treasuredBtn.disabled = true;
+              if (liked) {
+                await likeRef.delete();
+                await postRef.update({ likeCount: firebase.firestore.FieldValue.increment(-1), updatedAt: now });
+              } else {
+                const name = els.guestName.value.trim() || "Guest";
+                await likeRef.set({ likerName: name.length >= 2 ? name : "Guest", createdAt: now });
+                await postRef.update({ likeCount: firebase.firestore.FieldValue.increment(1), updatedAt: now });
+              }
+              treasuredBtn.classList.toggle("active");
+              const icon = treasuredBtn.querySelector("span");
+              if (icon) icon.textContent = liked ? "✧" : "✦";
+            } catch (e) {
+              console.error("Like error:", e);
+            } finally {
+              treasuredBtn.disabled = false;
+            }
+          });
+        }
+
+        const commentBtn = root.querySelector(".comment-btn");
+        const commentsArea = root.querySelector(".comments-area");
+        const listEl = root.querySelector(".comments-list");
+        if (commentBtn && commentsArea) {
+          commentBtn.addEventListener("click", () => {
+            const isVisible = commentsArea.style.display !== "none";
+            commentsArea.style.display = isVisible ? "none" : "";
+            if (!isVisible && !commentsArea.dataset.loaded) {
+              commentsArea.dataset.loaded = "1";
+              loadComments(postId, listEl);
+            }
+          });
+        }
+        const commentSubmit = root.querySelector(".comment-submit");
+        if (commentSubmit) {
+          commentSubmit.addEventListener("click", () => addComment(postId, root));
+          root.querySelector(".comment-input")?.addEventListener("keydown", e => {
+            if (e.key === "Enter") addComment(postId, root);
+          });
+        }
+      }
+
+      function renderFirestorePost(id, data, prepend = true) {
+        const { uploaderName, caption, mediaItems = [], createdAt, likeCount = 0 } = data;
+        const title = caption || "A memory from tonight";
+        const items = mediaItems.map(item => ({
+          url: item.url,
+          kind: item.kind,
+          file: { name: item.publicId || "memory" }
+        }));
+        const mediaHtml = items.length > 1
+          ? makeMultiMedia(items, title)
+          : items.length === 1
+            ? makeSingleMedia(items[0], title)
+            : makeFallbackArt("Wedding Wish");
+        const ts = createdAt?.toDate ? formatTimestamp(createdAt.toDate()) : "";
+        const article = document.createElement("article");
+        article.className = "post visible";
+        article.dataset.postId = id;
+        article.innerHTML = `
+          <div class="post-media-container">
+            <div class="archive-stamp">
+              <span>M</span>
+              <span style="font-size:14px;margin:2px 0">&amp;</span>
+              <span>S</span>
+            </div>
+            ${mediaHtml}
+          </div>
+          <div class="post-content">
+            <div class="post-uploader">${escapeHtml(uploaderName)}${ts ? ` <span class="post-time">${ts}</span>` : ""}</div>
+            <h3>${escapeHtml(title)}</h3>
+            <div class="post-meta">
+              <button class="interaction treasured-btn" type="button"><span>✧</span> <b>${likeCount}</b> Treasured</button>
+              <button class="interaction comment-btn" type="button">💬 Comment</button>
+            </div>
+            <div class="comments-area" style="display:none">
+              <div class="comments-list"></div>
+              <div class="comment-input-row">
+                <input class="comment-input" type="text" placeholder="Add a comment…" maxlength="500" />
+                <button class="btn-secondary comment-submit" type="button">Post</button>
+              </div>
+            </div>
+          </div>
+        `;
+        els.emptyState.style.display = "none";
+        if (prepend) els.timeline.prepend(article);
+        else els.timeline.appendChild(article);
+        attachFirestoreInteractions(article, id);
+        attachPostInteractions(article);
       }
 
       function attachPostInteractions(root = document) {
@@ -1489,12 +1742,20 @@
       els.publish.addEventListener("click", async () => {
         try {
           const payload = validateComposer();
-          const mediaItems = await simulateUpload();
-          const saved = await AppAdapters.saveTimelinePost({ ...payload, mediaItems });
-          createPost(saved);
+          setBusy(true);
+          els.progressTrack.classList.add("active");
+          setStatus("Preparing upload…");
+          const mediaItems = await AppAdapters.uploadMediaBatch({
+            items: state.files,
+            onProgress(step) {
+              els.progressBar.style.width = `${step}%`;
+              setStatus(step < 100 ? "Uploading…" : "Saving to timeline…");
+            }
+          });
+          await AppAdapters.saveTimelinePost({ ...payload, mediaItems });
           clearComposer(true, false);
           closeComposer();
-          setStatus("Published to the timeline. Upload controls are ready again.");
+          setStatus("Shared! Your memory is now live for everyone.");
         } catch (error) {
           setStatus(error instanceof Error ? error.message : "Could not publish this memory.", true);
         } finally {
@@ -1521,6 +1782,47 @@
 
       attachPostInteractions();
       document.querySelectorAll(".post:not(.visible)").forEach(post => observer.observe(post));
+
+      // Sync badge
+      const syncBadge = document.createElement("div");
+      syncBadge.className = "sync-badge";
+      syncBadge.textContent = "● LIVE";
+      document.body.appendChild(syncBadge);
+      function flashSync() {
+        syncBadge.classList.add("show");
+        clearTimeout(flashSync._t);
+        flashSync._t = setTimeout(() => syncBadge.classList.remove("show"), 2200);
+      }
+
+      // Real-time Firestore feed — all devices see all posts
+      let initialLoadDone = false;
+      db.collection("wedding_timeline")
+        .where("isDeleted", "==", false)
+        .orderBy("createdAt", "desc")
+        .limit(50)
+        .onSnapshot(snapshot => {
+          const changes = snapshot.docChanges();
+          if (!initialLoadDone) {
+            [...changes].reverse().forEach(change => {
+              if (!els.timeline.querySelector(`[data-post-id="${change.doc.id}"]`)) {
+                renderFirestorePost(change.doc.id, change.doc.data(), true);
+              }
+            });
+            initialLoadDone = true;
+            if (changes.length) flashSync();
+          } else {
+            changes.forEach(change => {
+              if (change.type === "added" && !els.timeline.querySelector(`[data-post-id="${change.doc.id}"]`)) {
+                renderFirestorePost(change.doc.id, change.doc.data(), true);
+                flashSync();
+              }
+              if (change.type === "modified") {
+                updatePostLikeCount(change.doc.id, change.doc.data().likeCount);
+              }
+            });
+          }
+          els.emptyState.style.display = els.timeline.querySelector("[data-post-id]") ? "none" : "";
+        }, err => console.error("Firestore feed error:", err));
     </script>
   </body>
 </html>
