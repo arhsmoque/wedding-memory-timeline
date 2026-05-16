@@ -11,6 +11,8 @@ vite-dev.log
 vite-dev.err.log
 *.local
 *.log
+.firebase/
+.arh-tool-config/
 test-media/
 qa-*.png
 github-pages-preview-dist.zip
