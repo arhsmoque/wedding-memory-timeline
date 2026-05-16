@@ -1,4 +1,4 @@
-name = "ash-2026-photobook-upload-worker"
+name = "malik-sabrina-wedding-upload-worker"
 main = "worker/src/index.ts"
 compatibility_date = "2026-05-16"
 account_id = "dc3bfa957bdf216b7cc45214455aaa72"

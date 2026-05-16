@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages Preview
+name: Deploy GitHub Pages
 
 on:
   push:
@@ -19,6 +19,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_BASE_PATH: /malik-sabrina-wedding-timeline/
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_CLOUDINARY_CLOUD_NAME: ${{ secrets.VITE_CLOUDINARY_CLOUD_NAME }}
+      VITE_UPLOAD_WORKER_URL: ${{ secrets.VITE_UPLOAD_WORKER_URL }}
+      VITE_DEBUG_PANEL: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
