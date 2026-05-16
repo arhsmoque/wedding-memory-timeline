@@ -44,11 +44,11 @@
         color: var(--text);
         font-family: var(--body);
         line-height: 1.6;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2020/svg'%3E%3Cfilter id='bgNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23bgNoise)' opacity='0.03'/%3E%3C/svg%3E");
-        /* fixed attachment breaks on iOS Safari — use scroll */
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='bgNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23bgNoise)' opacity='0.03'/%3E%3C/svg%3E");
         background-attachment: scroll;
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior-y: none;
+        overflow-x: hidden;
       }
 
       button, input, textarea { font: inherit; outline: none; }
@@ -470,15 +470,13 @@
         background: var(--paper);
         padding: 12px;
         box-shadow: 0 20px 50px rgba(0,0,0,0.05);
-        transform: rotate(-1deg);
         transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
       }
 
-      .post:hover .post-media-container { transform: rotate(0deg) scale(1.02); z-index: 10; }
-
       @media (min-width: 900px) {
-        .post-media-container { grid-column: span 7; }
+        .post-media-container { grid-column: span 7; transform: rotate(-1deg); }
         .post-content { grid-column: span 5; padding-top: 40px; }
+        .post:hover .post-media-container { transform: rotate(0deg) scale(1.02); z-index: 10; }
         .post:nth-child(even) .post-media-container { grid-column: 6 / span 7; grid-row: 1; transform: rotate(1.5deg); }
         .post:nth-child(even) .post-content { grid-column: 1 / span 5; grid-row: 1; text-align: right; }
       }
@@ -667,18 +665,24 @@
       }
 
       .viewer-body {
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         background: #171512;
-        max-height: 78vh;
+        max-height: 80dvh;
+        max-height: 80vh;
         overflow: hidden;
       }
 
       .viewer-body img,
       .viewer-body video {
         max-width: 100%;
-        max-height: 78vh;
+        max-height: 80dvh;
+        max-height: 80vh;
+        width: auto;
+        height: auto;
         object-fit: contain;
+        display: block;
       }
     </style>
   </head>
@@ -753,7 +757,6 @@
           <button id="addMediaBtn" class="btn" style="background: transparent;" type="button">Gallery</button>
           <button id="publishBtn" class="btn btn-primary" type="button">Publish to Timeline</button>
         </div>
-        <p class="stage-note">Stage 1 preview: upload and viewing path only. Comments and social controls are shown but reserved for Stage 2.</p>
       </section>
 
       <section class="timeline" aria-label="Timeline feed">
@@ -776,18 +779,6 @@
             
             <div class="post-meta">
               <button class="interaction active" type="button"><span>✦</span> <b>24</b> Treasured</button>
-              <div class="interaction"><span>💬</span> 2 Sembang</div>
-            </div>
-
-            <div class="comments-area">
-              <div class="comment-bubble">
-                <div class="comment-name">Uncle Rahman</div>
-                <div class="comment-text">Beautiful moment. Congratulations!</div>
-              </div>
-              <div class="comment-bubble">
-                <div class="comment-name">You</div>
-                <div class="comment-text">So proud of you both.</div>
-              </div>
             </div>
           </div>
         </article>
@@ -816,7 +807,6 @@
             
             <div class="post-meta">
               <button class="interaction" type="button"><span>✧</span> <b>41</b> Treasured</button>
-              <div class="interaction"><span>💬</span> 9 Sembang</div>
             </div>
           </div>
         </article>
@@ -836,10 +826,8 @@
           <div class="post-content">
             <div class="post-uploader">Zara</div>
             <h3>The floor opened and suddenly everyone became brave.</h3>
-            
             <div class="post-meta">
               <button class="interaction active" type="button"><span>✦</span> <b>18</b> Treasured</button>
-              <div class="interaction"><span>💬</span> 0 Sembang</div>
             </div>
           </div>
         </article>
@@ -1358,15 +1346,8 @@
             <h3>${escapeHtml(title)}</h3>
             <div class="post-meta">
               <button class="interaction" type="button"><span>✧</span> <b>0</b> Treasured</button>
-              <button class="interaction" type="button" disabled title="Stage 2"><span>💬</span> 0 Sembang</button>
             </div>
             ${downloadLinks ? `<p class="stage-note">${downloadLinks}</p>` : ""}
-            <div class="comments-area">
-              <div class="comment-bubble">
-                <div class="comment-name">Stage 2</div>
-                <div class="comment-text">Comments, edit-once, and owner-only delete will be added after upload and viewing are locked.</div>
-              </div>
-            </div>
           </div>
         `;
         els.timeline.prepend(article);
